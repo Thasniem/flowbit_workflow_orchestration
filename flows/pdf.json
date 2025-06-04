@@ -1,0 +1,32 @@
+{
+    "name": "PDF Flow",
+    "nodes": [
+      {
+        "id": "1",
+        "type": "Input",
+        "name": "PDF Upload",
+        "properties": {
+          "input_type": "file",
+          "file_type": "pdf"
+        }
+      },
+      {
+        "id": "2",
+        "type": "Agent",
+        "name": "PDFAgent",
+        "properties": {
+          "task": "Extract and summarize the uploaded PDF"
+        }
+      },
+      {
+        "id": "3",
+        "type": "Output",
+        "name": "PDF Summary"
+      }
+    ],
+    "edges": [
+      { "from": "1", "to": "2" },
+      { "from": "2", "to": "3" }
+    ]
+  }
+  

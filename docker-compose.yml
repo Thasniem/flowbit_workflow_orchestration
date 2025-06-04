@@ -1,0 +1,34 @@
+version: "3.9"
+
+services:
+  langflow:
+    image: logspace/langflow:latest
+    ports:
+      - "7860:7860"
+    volumes:
+      - ./flows:/app/flows
+    environment:
+      - LANGFLOW_DEFAULT_FLOWS_PATH=/app/flows
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  n8n:
+    image: n8nio/n8n:latest
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=thasniem
+      - N8N_BASIC_AUTH_PASSWORD=__n8n_BLANK_VALUE_e5362baf-c777-4d57-a609-6eaf1f9e87f6
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - TZ=Asia/Kolkata
+    volumes:
+      - ./n8n_data:/home/node/.n8n
+    depends_on:
+      - redis

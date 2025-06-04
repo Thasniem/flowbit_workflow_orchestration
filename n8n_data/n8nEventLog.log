@@ -1,0 +1,4 @@
+{"__type":"$$EventMessageAudit","id":"8bc5ed35-baf7-4fcd-bbcf-c3a9006805dc","ts":"2025-06-05T00:25:15.919+05:30","eventName":"n8n.audit.user.login.failed","message":"n8n.audit.user.login.failed","payload":{"authenticationMethod":"email","userEmail":"thfjd7865@gmail.com","reason":"wrong credentials"}}
+{"__type":"$$EventMessageConfirm","confirm":"8bc5ed35-baf7-4fcd-bbcf-c3a9006805dc","ts":"2025-06-05T00:25:16.032+05:30","source":{"id":"0","name":"eventBus"}}
+{"__type":"$$EventMessageAudit","id":"ab3d1868-f85e-40c0-b6a4-098f7b52267b","ts":"2025-06-05T00:25:21.791+05:30","eventName":"n8n.audit.user.login.failed","message":"n8n.audit.user.login.failed","payload":{"authenticationMethod":"email","userEmail":"thfjd7865@gmail.com","reason":"wrong credentials"}}
+{"__type":"$$EventMessageConfirm","confirm":"ab3d1868-f85e-40c0-b6a4-098f7b52267b","ts":"2025-06-05T00:25:21.791+05:30","source":{"id":"0","name":"eventBus"}}

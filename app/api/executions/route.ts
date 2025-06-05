@@ -125,16 +125,29 @@ function createTimeoutPromise(ms: number) {
 
 // Fetch with timeout
 async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 5000) {
-  try {
-    const fetchPromise = fetch(url, options)
-    const timeoutPromise = createTimeoutPromise(timeoutMs)
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    return (await Promise.race([fetchPromise, timeoutPromise])) as Response
-  } catch (error) {
-    throw error
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error: unknown) {
+    clearTimeout(timeoutId);
+    const errorInfo = {
+      url,
+      code: (error as any)?.cause?.code || (error as any)?.code || 'UNKNOWN',
+      name: error instanceof Error ? error.name : 'UnknownError',
+      message: error instanceof Error ? error.message : String(error)
+    };
+
+    console.error('Connection Failed:', errorInfo);
+    throw error;
   }
 }
-
 // n8n API integration with improved error handling
 async function fetchN8nExecutions() {
   // Check if environment variables are set

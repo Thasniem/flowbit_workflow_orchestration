@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 
 // Mock data for when API connections fail
-// Update mock data to use ISO timestamps
 const mockN8nExecutions = [
   {
     id: "n8n-exec-1",
@@ -10,7 +9,7 @@ const mockN8nExecutions = [
     engine: "n8n",
     status: "success",
     duration: "2.3s",
-    startTime: "2024-01-15T14:30:22.000Z",  // ISO format
+    startTime: "15.01.2024 14:30:22",
     triggerType: "webhook",
     folderId: "unassigned",
     executionData: {
@@ -31,7 +30,7 @@ const mockN8nExecutions = [
     engine: "n8n",
     status: "error",
     duration: "1.1s",
-    startTime: "2024-01-15T14:25:15.000Z",
+    startTime: "15.01.2024 14:25:15",
     triggerType: "webhook",
     folderId: "marketing",
     executionData: {
@@ -49,7 +48,7 @@ const mockN8nExecutions = [
     engine: "n8n",
     status: "running",
     duration: "Running...",
-    startTime: "2024-01-15T14:35:10.000Z",
+    startTime: "15.01.2024 14:35:10",
     triggerType: "schedule",
     folderId: "data-processing",
     executionData: {
@@ -72,7 +71,7 @@ const mockLangflowExecutions = [
     engine: "langflow",
     status: "success",
     duration: "45.2s",
-    startTime: "2024-01-15T14:20:08.000Z",
+    startTime: "15.01.2024 14:20:08",
     triggerType: "schedule",
     folderId: "data-processing",
     executionData: {
@@ -89,7 +88,7 @@ const mockLangflowExecutions = [
     engine: "langflow",
     status: "success",
     duration: "12.7s",
-    startTime: "2024-01-15T14:15:33.000Z",
+    startTime: "15.01.2024 14:15:33",
     triggerType: "manual",
     folderId: "unassigned",
     executionData: {
@@ -105,7 +104,7 @@ const mockLangflowExecutions = [
     engine: "langflow",
     status: "error",
     duration: "8.1s",
-    startTime: "2024-01-15T14:10:15.000Z",
+    startTime: "15.01.2024 14:10:15",
     triggerType: "webhook",
     folderId: "marketing",
     executionData: {
@@ -126,118 +125,56 @@ function createTimeoutPromise(ms: number) {
 
 // Fetch with timeout
 async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 5000) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
   try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-    return response;
-  } catch (error: unknown) {
-    clearTimeout(timeoutId);
-    const errorInfo = {
-      url,
-      code: (error as any)?.cause?.code || (error as any)?.code || 'UNKNOWN',
-      name: error instanceof Error ? error.name : 'UnknownError',
-      message: error instanceof Error ? error.message : String(error)
-    };
+    const fetchPromise = fetch(url, options)
+    const timeoutPromise = createTimeoutPromise(timeoutMs)
 
-    console.error('Network Failure:', errorInfo);
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-async function fetchLangflowExecutions() {
-  const langflowBaseUrl = process.env.LANGFLOW_BASE_URL;
-  const langflowApiKey = process.env.LANGFLOW_API_KEY;
-
-  console.log("Langflow Service URL:", `${langflowBaseUrl}/api/v1/runs`);
-  console.log("Langflow API Key:", langflowApiKey ? "***REDACTED***" : "Not set");
-
-  if (!langflowBaseUrl || !langflowApiKey) {
-    console.warn("Langflow configuration incomplete. Using mock data");
-    return mockLangflowExecutions;
-  }
-
-  try {
-    const response = await fetchWithTimeout(
-      `${langflowBaseUrl}/api/v1/runs`,
-      {
-        headers: {
-          Authorization: `Bearer ${langflowApiKey}`,
-          "Content-Type": "application/json",
-        },
-      },
-      5000
-    );
-
-    console.log(`Langflow API Response Status: ${response.status}`);
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error(`Langflow API Error ${response.status}: ${errorBody}`);
-      return mockLangflowExecutions;
-    }
-
-    const data = await response.json();
-    return data.runs.map((run: any) => ({
-      id: run.id,
-      workflowId: run.flow_id,
-      workflowName: run.flow_name || "Unknown Flow",
-      engine: "langflow",
-      status: run.status === "SUCCESS" ? "success" : run.status === "ERROR" ? "error" : "running",
-      duration: run.duration ? `${run.duration.toFixed(1)}s` : "N/A",
-      startTime: new Date(run.timestamp).toISOString(),
-      triggerType: run.trigger_type || "manual",
-      folderId: run.tags?.[0] || "unassigned",
-      executionData: run,
-    }));
+    return (await Promise.race([fetchPromise, timeoutPromise])) as Response
   } catch (error) {
-    console.error("Langflow Connection Failed - Verify service running at:", langflowBaseUrl);
-    return mockLangflowExecutions;
+    throw error
   }
 }
 
-// Fix 1: Remove duplicate fields in response mappings
+// n8n API integration with improved error handling
 async function fetchN8nExecutions() {
-  const n8nBaseUrl = process.env.N8N_BASE_URL;
-  const n8nApiKey = process.env.N8N_API_KEY;
+  // Check if environment variables are set
+  const n8nBaseUrl = process.env.N8N_BASE_URL
+  const n8nApiKey = process.env.N8N_API_KEY
 
-  console.log("N8N Service URL:", `${n8nBaseUrl}/rest/executions`);
-  console.log("N8N API Key:", n8nApiKey ? "***REDACTED***" : "Not set");
+  console.log("N8N Configuration:", {
+    baseUrl: n8nBaseUrl ? "Set" : "Not set",
+    apiKey: n8nApiKey ? "Set" : "Not set",
+  })
 
   if (!n8nBaseUrl || !n8nApiKey) {
-    console.warn("N8N configuration incomplete. Using mock data");
-    return mockN8nExecutions;
+    console.log("N8N environment variables not configured, using mock data")
+    return mockN8nExecutions
   }
 
   try {
+    const url = `${n8nBaseUrl}/rest/executions`
+    console.log(`Attempting to fetch n8n executions from: ${url}`)
+
     const response = await fetchWithTimeout(
-      `${n8nBaseUrl}/rest/executions`,
+      url,
       {
         headers: {
           Authorization: `Bearer ${n8nApiKey}`,
           "Content-Type": "application/json",
         },
       },
-      5000
-    );
+      5000,
+    ) // 5 second timeout
 
-    console.log(`N8N API Response Status: ${response.status}`);
+    console.log(`N8N API Response Status: ${response.status}`)
 
     if (!response.ok) {
-      const errorBody = await response.text();
-      console.error(`N8N API Error ${response.status}: ${errorBody}`);
-      return mockN8nExecutions;
+      throw new Error(`n8n API error: ${response.status} ${response.statusText}`)
     }
 
-    const data = await response.json();
-    // In fetchN8nExecutions response mapping
+    const data = await response.json()
+    console.log(`N8N API returned ${data.data?.length || 0} executions`)
+
     return data.data.map((execution: any) => ({
       id: execution.id,
       workflowId: execution.workflowId,
@@ -247,12 +184,67 @@ async function fetchN8nExecutions() {
       duration: execution.finished
         ? `${((new Date(execution.stoppedAt).getTime() - new Date(execution.startedAt).getTime()) / 1000).toFixed(1)}s`
         : "Running...",
-      startTime: execution.startedAt ? 
-        new Date(execution.startedAt).toISOString() : 
-        new Date().toISOString(), // Fallback to current time
-    }));
-    
-    // In fetchLangflowExecutions response mapping
+      startTime: new Date(execution.startedAt)
+        .toLocaleDateString("de-DE", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        })
+        .replace(",", ""),
+      triggerType: execution.mode || "manual",
+      folderId: execution.workflowData?.tags?.[0] || "unassigned",
+      executionData: execution,
+    }))
+  } catch (error) {
+    console.error("Error fetching n8n executions:", error)
+    console.log("Falling back to mock n8n execution data")
+    return mockN8nExecutions
+  }
+}
+
+// Langflow API integration with improved error handling
+async function fetchLangflowExecutions() {
+  // Check if environment variables are set
+  const langflowBaseUrl = process.env.LANGFLOW_BASE_URL
+  const langflowApiKey = process.env.LANGFLOW_API_KEY
+
+  console.log("Langflow Configuration:", {
+    baseUrl: langflowBaseUrl ? "Set" : "Not set",
+    apiKey: langflowApiKey ? "Set" : "Not set",
+  })
+
+  if (!langflowBaseUrl || !langflowApiKey) {
+    console.log("Langflow environment variables not configured, using mock data")
+    return mockLangflowExecutions
+  }
+
+  try {
+    const url = `${langflowBaseUrl}/api/v1/runs`
+    console.log(`Attempting to fetch Langflow executions from: ${url}`)
+
+    const response = await fetchWithTimeout(
+      url,
+      {
+        headers: {
+          Authorization: `Bearer ${langflowApiKey}`,
+          "Content-Type": "application/json",
+        },
+      },
+      5000,
+    ) // 5 second timeout
+
+    console.log(`Langflow API Response Status: ${response.status}`)
+
+    if (!response.ok) {
+      throw new Error(`Langflow API error: ${response.status} ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    console.log(`Langflow API returned ${data.runs?.length || 0} executions`)
+
     return data.runs.map((run: any) => ({
       id: run.id,
       workflowId: run.flow_id,
@@ -260,13 +252,24 @@ async function fetchN8nExecutions() {
       engine: "langflow",
       status: run.status === "SUCCESS" ? "success" : run.status === "ERROR" ? "error" : "running",
       duration: run.duration ? `${run.duration.toFixed(1)}s` : "N/A",
-      startTime: run.timestamp ? 
-        new Date(run.timestamp).toISOString() : 
-        new Date().toISOString(), // Fallback to current time
-    }));
+      startTime: new Date(run.timestamp)
+        .toLocaleDateString("de-DE", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        })
+        .replace(",", ""),
+      triggerType: run.trigger_type || "manual",
+      folderId: run.tags?.[0] || "unassigned",
+      executionData: run,
+    }))
   } catch (error) {
-    console.error("N8N Connection Failed - Verify service running at:", n8nBaseUrl);
-    return mockN8nExecutions;
+    console.error("Error fetching Langflow executions:", error)
+    console.log("Falling back to mock Langflow execution data")
+    return mockLangflowExecutions
   }
 }
 
@@ -286,9 +289,12 @@ export async function GET() {
 
     const allExecutions = [...n8nExecutions, ...langflowExecutions]
       .sort((a, b) => {
-        return new Date(b.startTime).getTime() - new Date(a.startTime).getTime() // Fix 5: Direct date comparison
+        // Parse dates for proper comparison
+        const dateA = a.startTime.split(" ")[0].split(".").reverse().join("-") + " " + a.startTime.split(" ")[1]
+        const dateB = b.startTime.split(" ")[0].split(".").reverse().join("-") + " " + b.startTime.split(" ")[1]
+        return new Date(dateB).getTime() - new Date(dateA).getTime()
       })
-      .slice(0, 50)
+      .slice(0, 50) // Last 50 executions
 
     console.log(`Returning ${allExecutions.length} total executions`)
 
@@ -319,7 +325,7 @@ export async function GET() {
     return NextResponse.json({
       executions: mockExecutions,
       usingMockData: true,
-      message: "Falling back to mock data due to server error",
-    });
+      message: "Using mock data due to unexpected error",
+    })
   }
 }

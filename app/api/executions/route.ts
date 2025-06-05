@@ -237,6 +237,7 @@ async function fetchN8nExecutions() {
     }
 
     const data = await response.json();
+    // In fetchN8nExecutions response mapping
     return data.data.map((execution: any) => ({
       id: execution.id,
       workflowId: execution.workflowId,
@@ -246,10 +247,22 @@ async function fetchN8nExecutions() {
       duration: execution.finished
         ? `${((new Date(execution.stoppedAt).getTime() - new Date(execution.startedAt).getTime()) / 1000).toFixed(1)}s`
         : "Running...",
-      startTime: new Date(execution.startedAt).toISOString(),
-      triggerType: execution.mode || "manual",
-      folderId: execution.workflowData?.tags?.[0] || "unassigned",
-      executionData: execution,
+      startTime: execution.startedAt ? 
+        new Date(execution.startedAt).toISOString() : 
+        new Date().toISOString(), // Fallback to current time
+    }));
+    
+    // In fetchLangflowExecutions response mapping
+    return data.runs.map((run: any) => ({
+      id: run.id,
+      workflowId: run.flow_id,
+      workflowName: run.flow_name || "Unknown Flow",
+      engine: "langflow",
+      status: run.status === "SUCCESS" ? "success" : run.status === "ERROR" ? "error" : "running",
+      duration: run.duration ? `${run.duration.toFixed(1)}s` : "N/A",
+      startTime: run.timestamp ? 
+        new Date(run.timestamp).toISOString() : 
+        new Date().toISOString(), // Fallback to current time
     }));
   } catch (error) {
     console.error("N8N Connection Failed - Verify service running at:", n8nBaseUrl);

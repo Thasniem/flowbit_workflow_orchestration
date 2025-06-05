@@ -1,5 +1,5 @@
 "use client"
-import { parse, isValid, format } from 'date-fns';
+
 import { useState, useEffect } from "react"
 import {
   Play,
@@ -390,12 +390,7 @@ export function ExecutionsDashboard({ selectedFolder }: ExecutionsDashboardProps
                       </div>
                     </TableCell>
                     <TableCell>{execution.duration}</TableCell>
-                    <TableCell>
-                      {isValid(parse(execution.startTime, 'dd.MM.yyyy HH:mm:ss', new Date()))
-                      ? format(parse(execution.startTime, 'dd.MM.yyyy HH:mm:ss', new Date()), 'dd MMM yyyy HH:mm:ss')
-                      : 'Invalid Date'}
-                    </TableCell>
-
+                    <TableCell>{execution.startTime}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
                         <Button
